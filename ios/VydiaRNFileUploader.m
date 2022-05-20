@@ -313,6 +313,8 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
       
         [sessionConfiguration setDiscretionary:YES];
         [sessionConfiguration setAllowsCellularAccess:NO];
+        [sessionConfiguration setAllowsExpensiveNetworkAccess:NO];
+        [sessionConfiguration setAllowsConstrainedNetworkAccess:NO];
       
         if (groupId != nil && ![groupId isEqualToString:@""]) {
             sessionConfiguration.sharedContainerIdentifier = groupId;
