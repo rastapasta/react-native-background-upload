@@ -200,7 +200,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
 
         NSURLSessionDataTask *uploadTask;
       
-        NSURLSession *session = isDiscretionary ? [self urlSession:appGroup] : [self discretionaryUrlSession:appGroup];
+        NSURLSession *session = isDiscretionary ? [self discretionaryUrlSession:appGroup] : [self urlSession:appGroup];
 
         if ([uploadType isEqualToString:@"multipart"]) {
             NSString *uuidStr = [[NSUUID UUID] UUIDString];
