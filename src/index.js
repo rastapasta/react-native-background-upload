@@ -23,6 +23,7 @@ export type StartUploadArgs = {
   parameters?: { [string]: string },
   headers?: Object,
   notification?: NotificationArgs,
+  isDiscretionary: Boolean,
 };
 
 const NativeModule =

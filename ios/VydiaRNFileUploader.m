@@ -19,6 +19,7 @@ static int uploadId = 0;
 static RCTEventEmitter* staticEventEmitter = nil;
 static NSString *BACKGROUND_SESSION_ID = @"ReactNativeBackgroundUpload";
 NSURLSession *_urlSession = nil;
+NSURLSession *_discretionaryUrlSession = nil;
 
 + (BOOL)requiresMainQueueSetup {
     return NO;
@@ -160,6 +161,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
     NSString *appGroup = options[@"appGroup"];
     NSDictionary *headers = options[@"headers"];
     NSDictionary *parameters = options[@"parameters"];
+    BOOL isDiscretionary = options[@"isDiscretionary"];
 
     @try {
         NSURL *requestUrl = [NSURL URLWithString: uploadUrl];
@@ -197,6 +199,8 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
         }
 
         NSURLSessionDataTask *uploadTask;
+      
+        NSURLSession *session = isDiscretionary ? [self urlSession:appGroup] : [self discretionaryUrlSession:appGroup];
 
         if ([uploadType isEqualToString:@"multipart"]) {
             NSString *uuidStr = [[NSUUID UUID] UUIDString];
@@ -206,14 +210,14 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             [request setHTTPBodyStream: [NSInputStream inputStreamWithData:httpBody]];
             [request setValue:[NSString stringWithFormat:@"%zd", httpBody.length] forHTTPHeaderField:@"Content-Length"];
 
-            uploadTask = [[self urlSession: appGroup] uploadTaskWithStreamedRequest:request];
+            uploadTask = [session uploadTaskWithStreamedRequest:request];
         } else {
             if (parameters.count > 0) {
                 reject(@"RN Uploader", @"Parameters supported only in multipart type", nil);
                 return;
             }
 
-            uploadTask = [[self urlSession: appGroup] uploadTaskWithRequest:request fromFile:[NSURL URLWithString: fileURI]];
+            uploadTask = [session uploadTaskWithRequest:request fromFile:[NSURL URLWithString: fileURI]];
         }
 
         uploadTask.taskDescription = customUploadId ? customUploadId : [NSString stringWithFormat:@"%i", thisUploadId];
@@ -233,6 +237,14 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
  */
 RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     [_urlSession getTasksWithCompletionHandler:^(NSArray *dataTasks, NSArray *uploadTasks, NSArray *downloadTasks) {
+        for (NSURLSessionTask *uploadTask in uploadTasks) {
+            if ([uploadTask.taskDescription isEqualToString:cancelUploadId]){
+                // == checks if references are equal, while isEqualToString checks the string value
+                [uploadTask cancel];
+            }
+        }
+    }];
+    [_discretionaryUrlSession getTasksWithCompletionHandler:^(NSArray *dataTasks, NSArray *uploadTasks, NSArray *downloadTasks) {
         for (NSURLSessionTask *uploadTask in uploadTasks) {
             if ([uploadTask.taskDescription isEqualToString:cancelUploadId]){
                 // == checks if references are equal, while isEqualToString checks the string value
@@ -293,6 +305,21 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
     }
 
     return _urlSession;
+}
+
+- (NSURLSession *)discretionaryUrlSession: (NSString *) groupId {
+    if (_discretionaryUrlSession == nil) {
+        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
+      
+        [sessionConfiguration setDiscretionary:YES];
+      
+        if (groupId != nil && ![groupId isEqualToString:@""]) {
+            sessionConfiguration.sharedContainerIdentifier = groupId;
+        }
+      _discretionaryUrlSession = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:self delegateQueue:nil];
+    }
+
+    return _discretionaryUrlSession;
 }
 
 #pragma NSURLSessionTaskDelegate

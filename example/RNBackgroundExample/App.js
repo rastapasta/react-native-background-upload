@@ -102,6 +102,7 @@ const App: () => React$Node = () => {
               headers: {
                 'content-type': metadata.mimeType, // server requires a content-type header
               },
+              isDiscretionary: true,
             },
             options,
           );

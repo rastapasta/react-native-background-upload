@@ -95,7 +95,8 @@ declare module "react-native-background-upload" {
          */
         appGroup?: string;
         // Necessary only for multipart type upload
-        field?: string
+        field?: string;
+        isDiscretionary: Boolean;
     }
 
     export interface MultipartUploadOptions extends UploadOptions {
