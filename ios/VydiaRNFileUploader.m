@@ -312,6 +312,7 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
       
         [sessionConfiguration setDiscretionary:YES];
+        [sessionConfiguration setAllowsCellularAccess:NO];
       
         if (groupId != nil && ![groupId isEqualToString:@""]) {
             sessionConfiguration.sharedContainerIdentifier = groupId;
