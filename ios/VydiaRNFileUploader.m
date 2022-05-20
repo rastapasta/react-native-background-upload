@@ -313,8 +313,10 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
       
         [sessionConfiguration setDiscretionary:YES];
         [sessionConfiguration setAllowsCellularAccess:NO];
-        [sessionConfiguration setAllowsExpensiveNetworkAccess:NO];
-        [sessionConfiguration setAllowsConstrainedNetworkAccess:NO];
+        if (@available(iOS 13.0, *)) {
+           [sessionConfiguration setAllowsConstrainedNetworkAccess:NO];
+           [sessionConfiguration setAllowsExpensiveNetworkAccess:NO];
+        }
       
         if (groupId != nil && ![groupId isEqualToString:@""]) {
             sessionConfiguration.sharedContainerIdentifier = groupId;
