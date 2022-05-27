@@ -298,6 +298,10 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
 - (NSURLSession *)urlSession: (NSString *) groupId {
     if (_urlSession == nil) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
+
+        if (@available(iOS 11.0, *)) {
+            [sessionConfiguration setWaitsForConnectivity:YES];
+        }
         if (groupId != nil && ![groupId isEqualToString:@""]) {
             sessionConfiguration.sharedContainerIdentifier = groupId;
         }
@@ -311,6 +315,9 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
     if (_discretionaryUrlSession == nil) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
       
+        if (@available(iOS 11.0, *)) {
+            [sessionConfiguration setWaitsForConnectivity:YES];
+        }
         [sessionConfiguration setDiscretionary:YES];
         [sessionConfiguration setAllowsCellularAccess:NO];
         if (@available(iOS 13.0, *)) {
