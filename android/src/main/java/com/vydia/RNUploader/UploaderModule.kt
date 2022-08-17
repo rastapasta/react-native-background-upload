@@ -12,23 +12,14 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import com.facebook.react.bridge.*
 import net.gotev.uploadservice.UploadService
-import net.gotev.uploadservice.UploadServiceConfig.httpStack
-import net.gotev.uploadservice.UploadServiceConfig.retryPolicy
-import net.gotev.uploadservice.UploadServiceConfig.threadPool
-import net.gotev.uploadservice.data.RetryPolicyConfig
 import net.gotev.uploadservice.data.UploadInfo
 import net.gotev.uploadservice.exceptions.UserCancelledUploadException
 import net.gotev.uploadservice.observer.request.GlobalRequestObserver
-import net.gotev.uploadservice.okhttp.OkHttpStack
 import net.gotev.uploadservice.protocols.binary.BinaryUploadRequest
 import net.gotev.uploadservice.protocols.multipart.MultipartUploadRequest
-import okhttp3.OkHttpClient
 import java.io.File
-import java.util.*
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
-data class DeferredUpload(val id: String, val options: ReadableMap)
+data class DeferredUpload(val id: String, val options: StartUploadOptions)
 
 class UploaderModule(val reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -48,29 +39,6 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     // Initialize everything here so listeners can continue to listen
     // seamlessly after JS reloads
 
-    // == limit number of concurrent uploads ==
-    val pool = threadPool as ThreadPoolExecutor
-    pool.corePoolSize = 1
-    pool.maximumPoolSize = 1
-
-    retryPolicy = RetryPolicyConfig(
-      initialWaitTimeSeconds = 1,
-      maxWaitTimeSeconds = TimeUnit.HOURS.toSeconds(1).toInt(),
-      multiplier = 2,
-      defaultMaxRetries = 2
-    )
-
-    httpStack = OkHttpStack(
-      OkHttpClient().newBuilder()
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .retryOnConnectionFailure(true)
-        .connectTimeout(15L, TimeUnit.SECONDS)
-        .writeTimeout(30L, TimeUnit.SECONDS)
-        .readTimeout(30L, TimeUnit.SECONDS)
-        .cache(null)
-        .build()
-    )
 
     // == register upload listener ==
     val application = reactContext.applicationContext as Application
@@ -147,7 +115,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
 
     val startedUploads = mutableListOf<DeferredUpload>()
     deferredUploads.forEach {
-      if (_startUpload(it.id, it.options))
+      if (_startUpload(it.options))
         startedUploads.add(it)
     }
     deferredUploads.removeAll(startedUploads)
@@ -159,17 +127,12 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
    * Returns a promise with the string ID of the upload.
    */
   @ReactMethod
-  fun startUpload(options: ReadableMap, promise: Promise) {
+  fun startUpload(rawOptions: ReadableMap, promise: Promise) {
     try {
-      var uploadId: String? = null
-      if (options.hasKey("customUploadId"))
-        uploadId = options.getString("customUploadId")
-      if (uploadId == null)
-        uploadId = UUID.randomUUID().toString()
-
-      val started = _startUpload(uploadId, options)
-      if (!started) deferredUploads.add(DeferredUpload(uploadId, options))
-      promise.resolve(uploadId)
+      val options = StartUploadOptions(rawOptions)
+      val started = _startUpload(options)
+      if (!started) deferredUploads.add(DeferredUpload(options.id, options))
+      promise.resolve(options.id)
     } catch (exc: java.lang.Exception) {
       if (exc !is InvalidUploadOptionException) {
         exc.printStackTrace()
@@ -182,9 +145,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
   /**
    * @return whether the upload was started
    */
-  private fun _startUpload(uploadId: String, rawOptions: ReadableMap): Boolean {
-
-    val options = StartUploadOptions(rawOptions)
+  private fun _startUpload(options: StartUploadOptions): Boolean {
 
     val notificationManager =
       (reactContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
@@ -215,7 +176,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     request
       .setMethod(options.method)
       .setMaxRetries(options.maxRetries)
-      .setUploadID(uploadId)
+      .setUploadID(options.id)
       .startUpload()
 
     return true

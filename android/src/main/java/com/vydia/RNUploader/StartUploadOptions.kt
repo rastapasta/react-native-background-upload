@@ -2,6 +2,7 @@ package com.vydia.RNUploader
 
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
+import java.util.*
 
 class StartUploadOptions(options: ReadableMap) {
 
@@ -9,6 +10,7 @@ class StartUploadOptions(options: ReadableMap) {
     RAW, MULTIPART
   }
 
+  val id: String
   val url: String
   val path: String
   var method = "POST"
@@ -31,6 +33,7 @@ class StartUploadOptions(options: ReadableMap) {
     private set
 
   init {
+    id = options.getString("customUploadId") ?: UUID.randomUUID().toString()
     url = options.getString("url") ?: throw InvalidUploadOptionException("Missing 'url' field.")
     path = options.getString("path") ?: throw InvalidUploadOptionException("Missing 'path' field.")
     method = options.getString("method") ?: method;
