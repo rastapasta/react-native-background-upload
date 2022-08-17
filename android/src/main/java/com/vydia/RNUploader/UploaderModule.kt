@@ -48,7 +48,8 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
       }
 
       override fun onCapabilitiesChanged(
-        network: Network, networkCapabilities: NetworkCapabilities
+        network: Network,
+        networkCapabilities: NetworkCapabilities
       ) {
         processDeferredUploads()
       }
@@ -63,9 +64,9 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     })
   }
 
-  /*
-  Gets file information for the path specified.  Example valid path is: /storage/extSdCard/DCIM/Camera/20161116_074726.mp4
-  Returns an object such as: {extension: "mp4", size: "3804316", exists: true, mimeType: "video/mp4", name: "20161116_074726.mp4"}
+  /**
+   * Gets file information for the path specified.  Example valid path is: /storage/extSdCard/DCIM/Camera/20161116_074726.mp4
+   * Returns an object such as: {extension: "mp4", size: "3804316", exists: true, mimeType: "video/mp4", name: "20161116_074726.mp4"}
    */
   @ReactMethod
   fun getFileInfo(path: String, promise: Promise) {
@@ -97,7 +98,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
   @ReactMethod
   fun chunkFile(parentFilePath: String, chunkDirPath: String, numChunks: Int, promise: Promise) {
     try {
-      promise.resolve(chunkFile(parentFilePath, chunkDirPath, numChunks));
+      promise.resolve(chunkFile(parentFilePath, chunkDirPath, numChunks))
     } catch (error: Throwable) {
       promise.reject(error)
     }
@@ -109,14 +110,13 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
 
     val startedUploads = mutableListOf<DeferredUpload>()
     deferredUploads.forEach {
-      if (_startUpload(it.options))
-        startedUploads.add(it)
+      if (_startUpload(it.options)) startedUploads.add(it)
     }
     deferredUploads.removeAll(startedUploads)
   }
 
 
-  /*
+  /**
    * Starts a file upload.
    * Returns a promise with the string ID of the upload.
    */
@@ -146,24 +146,19 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     initializeNotificationChannel(options.notificationChannel, notificationManager)
 
     val request = if (options.requestType == StartUploadOptions.RequestType.RAW) {
-      OneTimeWorkRequestBuilder<UploadWorkerRaw>()
-        .setInputData(options.toData())
-        .build()
+      OneTimeWorkRequestBuilder<UploadWorkerRaw>().setInputData(options.toData()).build()
     } else {
-      OneTimeWorkRequestBuilder<UploadWorkerMultipart>()
-        .setInputData(options.toData())
-        .build()
+      OneTimeWorkRequestBuilder<UploadWorkerMultipart>().setInputData(options.toData()).build()
     }
 
-    if (!validateNetwork(options.discretionary, connectivityManager))
-      return false
+    if (!validateNetwork(options.discretionary, connectivityManager)) return false
 
     workManager.enqueue(request)
     return true
   }
 
 
-  /*
+  /**
    * Cancels file upload
    * Accepts upload ID as a first argument, this upload will be cancelled
    * Event "cancelled" will be fired when upload is cancelled.
@@ -176,21 +171,24 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     }
 
     // look in the deferredUploads list first
-    if (deferredUploads.removeIf { it.id == cancelUploadId }) {
+    if (deferredUploads.removeIf {
+        it.id == cancelUploadId
+      }) {
       promise.resolve(true)
       // report error for consistency sake
-      uploadEventListener.onError(
-        reactContext,
-        UploadInfo(cancelUploadId),
-        UserCancelledUploadException()
-      )
+      //      uploadEventListener.onError(
+      //        reactContext,
+      //        UploadInfo(cancelUploadId),
+      //        UserCancelledUploadException()
+      //      )
       return
     }
 
     // if it's not in the deferredUploads, it must have been started,
     // so we call stopUpload()
     try {
-      UploadService.stopUpload(cancelUploadId)
+      // TODO
+      // UploadService.stopUpload(cancelUploadId)
       promise.resolve(true)
     } catch (exc: java.lang.Exception) {
       exc.printStackTrace()
@@ -199,13 +197,14 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     }
   }
 
-  /*
+  /**
    * Cancels all file uploads
    */
   @ReactMethod
   fun stopAllUploads(promise: Promise) {
     try {
-      UploadService.stopAllUploads()
+      // TODO
+      // UploadService.stopAllUploads()
       promise.resolve(true)
     } catch (exc: java.lang.Exception) {
       exc.printStackTrace()
@@ -213,7 +212,6 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
       promise.reject(exc)
     }
   }
-
-
 }
+
 
