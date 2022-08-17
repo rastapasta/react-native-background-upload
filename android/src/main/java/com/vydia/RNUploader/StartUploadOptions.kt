@@ -2,10 +2,6 @@ package com.vydia.RNUploader
 
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
-import com.facebook.react.bridge.WritableMap
-import com.facebook.react.bridge.WritableNativeMap
-import net.gotev.uploadservice.data.UploadNotificationConfig
-import net.gotev.uploadservice.data.UploadNotificationStatusConfig
 
 class StartUploadOptions(options: ReadableMap) {
 
@@ -24,8 +20,6 @@ class StartUploadOptions(options: ReadableMap) {
   var discretionary = false
     private set
   var maxRetries = 2
-    private set
-  var notification: UploadNotificationConfig? = null
     private set
   var headers: Map<String, String> = emptyMap()
     private set
@@ -57,36 +51,6 @@ class StartUploadOptions(options: ReadableMap) {
     if (options.hasKey("isDiscretionary"))
       discretionary = options.getBoolean("isDiscretionary")
 
-
-    val notification: WritableMap = WritableNativeMap()
-    notification.putBoolean("enabled", true)
-    if (options.hasKey("notification"))
-      notification.merge(options.getMap("notification")!!)
-    notificationChannel = notification.getString("notificationChannel") ?: notificationChannel
-
-    if (notification.getBoolean("enabled")) {
-      this.notification = UploadNotificationConfig(
-        notificationChannelId = notificationChannel,
-        isRingToneEnabled = notification.hasKey("enableRingTone") && notification.getBoolean("enableRingTone"),
-        progress = UploadNotificationStatusConfig(
-          title = if (notification.hasKey("onProgressTitle")) notification.getString("onProgressTitle")!! else "",
-          message = if (notification.hasKey("onProgressMessage")) notification.getString("onProgressMessage")!! else ""
-        ),
-        success = UploadNotificationStatusConfig(
-          title = if (notification.hasKey("onCompleteTitle")) notification.getString("onCompleteTitle")!! else "",
-          message = if (notification.hasKey("onCompleteMessage")) notification.getString("onCompleteMessage")!! else "",
-          autoClear = notification.hasKey("autoClear") && notification.getBoolean("autoClear")
-        ),
-        error = UploadNotificationStatusConfig(
-          title = if (notification.hasKey("onErrorTitle")) notification.getString("onErrorTitle")!! else "",
-          message = if (notification.hasKey("onErrorMessage")) notification.getString("onErrorMessage")!! else ""
-        ),
-        cancelled = UploadNotificationStatusConfig(
-          title = if (notification.hasKey("onCancelledTitle")) notification.getString("onCancelledTitle")!! else "",
-          message = if (notification.hasKey("onCancelledMessage")) notification.getString("onCancelledMessage")!! else ""
-        )
-      )
-    }
 
     val parameters = options.getMap("parameters")
     if (parameters != null) {

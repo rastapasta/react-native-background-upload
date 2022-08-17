@@ -198,10 +198,6 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
         .addFileToUpload(options.path, options.field)
     }
 
-    val notification = options.notification
-    if (notification != null)
-      request.setNotificationConfig { _, _ -> notification }
-
     val connectivityManager =
       reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
