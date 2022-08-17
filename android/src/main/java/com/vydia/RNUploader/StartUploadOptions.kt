@@ -1,7 +1,10 @@
 package com.vydia.RNUploader
 
+import androidx.work.Data
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.bridge.WritableNativeMap
 import java.util.*
 
 class StartUploadOptions(options: ReadableMap) {
@@ -31,6 +34,39 @@ class StartUploadOptions(options: ReadableMap) {
     private set
   var field: String = ""
     private set
+
+  companion object {
+    val KEY_ID = "id"
+    val KEY_URL = "url"
+    val KEY_PATH = "path"
+    val KEY_METHOD = "method"
+    val KEY_HEADERS = "headers"
+    val KEY_PARAMETERS = "parameters"
+  }
+
+  fun toData(): Data {
+    return Data.Builder().run {
+      putString(KEY_ID, id)
+      putString(KEY_URL, url)
+      putString(KEY_METHOD, method)
+      putString(KEY_PATH, path)
+      val serializedHeaders = mutableListOf<String>()
+      val serializedParameters = mutableListOf<String>()
+      headers.forEach { (key, value) ->
+        serializedHeaders.add(key)
+        serializedHeaders.add(value)
+      }
+      parameters.forEach {(key, value) ->
+        serializedParameters.add(key)
+        serializedParameters.add(value)
+      }
+      putStringArray(KEY_HEADERS, serializedHeaders.toTypedArray())
+      putStringArray(KEY_PARAMETERS, serializedParameters.toTypedArray())
+      build()
+    }
+  }
+
+
 
   init {
     id = options.getString("customUploadId") ?: UUID.randomUUID().toString()

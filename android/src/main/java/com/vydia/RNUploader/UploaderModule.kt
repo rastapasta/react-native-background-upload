@@ -1,6 +1,5 @@
 package com.vydia.RNUploader
 
-import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
 import android.net.ConnectivityManager
@@ -10,13 +9,9 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.facebook.react.bridge.*
-import net.gotev.uploadservice.UploadService
-import net.gotev.uploadservice.data.UploadInfo
-import net.gotev.uploadservice.exceptions.UserCancelledUploadException
-import net.gotev.uploadservice.observer.request.GlobalRequestObserver
-import net.gotev.uploadservice.protocols.binary.BinaryUploadRequest
-import net.gotev.uploadservice.protocols.multipart.MultipartUploadRequest
 import java.io.File
 
 data class DeferredUpload(val id: String, val options: StartUploadOptions)
@@ -24,7 +19,10 @@ data class DeferredUpload(val id: String, val options: StartUploadOptions)
 class UploaderModule(val reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
   private val TAG = "UploaderBridge"
-  private val uploadEventListener = GlobalRequestObserverDelegate(reactContext)
+  private val workManager = WorkManager.getInstance(reactContext)
+  private val connectivityManager =
+    reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
 
   override fun getName(): String {
     return "RNFileUploader"
@@ -39,14 +37,10 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     // Initialize everything here so listeners can continue to listen
     // seamlessly after JS reloads
 
-
     // == register upload listener ==
-    val application = reactContext.applicationContext as Application
-    GlobalRequestObserver(application, uploadEventListener)
+    GlobalRequestListener.initialize(reactContext)
 
     // == register network listener ==
-    val connectivityManager =
-      reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     connectivityManager.registerDefaultNetworkCallback(object : NetworkCallback() {
       override fun onAvailable(network: Network) {
@@ -133,7 +127,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
       val started = _startUpload(options)
       if (!started) deferredUploads.add(DeferredUpload(options.id, options))
       promise.resolve(options.id)
-    } catch (exc: java.lang.Exception) {
+    } catch (exc: Throwable) {
       if (exc !is InvalidUploadOptionException) {
         exc.printStackTrace()
         Log.e(TAG, exc.message, exc)
@@ -152,33 +146,19 @@ class UploaderModule(val reactContext: ReactApplicationContext) :
     initializeNotificationChannel(options.notificationChannel, notificationManager)
 
     val request = if (options.requestType == StartUploadOptions.RequestType.RAW) {
-      BinaryUploadRequest(this.reactApplicationContext, options.url)
-        .setFileToUpload(options.path)
+      OneTimeWorkRequestBuilder<UploadWorkerRaw>()
+        .setInputData(options.toData())
+        .build()
     } else {
-      MultipartUploadRequest(this.reactApplicationContext, options.url)
-        .addFileToUpload(options.path, options.field)
+      OneTimeWorkRequestBuilder<UploadWorkerMultipart>()
+        .setInputData(options.toData())
+        .build()
     }
-
-    val connectivityManager =
-      reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     if (!validateNetwork(options.discretionary, connectivityManager))
       return false
 
-
-    options.parameters.forEach { (key, value) ->
-      request.addParameter(key, value)
-    }
-    options.headers.forEach { (key, value) ->
-      request.addHeader(key, value)
-    }
-
-    request
-      .setMethod(options.method)
-      .setMaxRetries(options.maxRetries)
-      .setUploadID(options.id)
-      .startUpload()
-
+    workManager.enqueue(request)
     return true
   }
 
