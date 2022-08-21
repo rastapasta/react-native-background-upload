@@ -96,6 +96,9 @@ declare module "react-native-background-upload" {
         appGroup?: string;
         // Necessary only for multipart type upload
         field?: string
+
+        // How long should the session kept open while idling? (Android only)
+        sessionTimeout?: number
     }
 
     export interface MultipartUploadOptions extends UploadOptions {

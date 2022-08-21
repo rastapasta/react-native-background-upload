@@ -11,6 +11,7 @@ import com.facebook.react.BuildConfig
 import com.facebook.react.bridge.*
 import net.gotev.uploadservice.UploadService
 import net.gotev.uploadservice.UploadServiceConfig.httpStack
+import net.gotev.uploadservice.UploadServiceConfig.idleTimeoutSeconds
 import net.gotev.uploadservice.UploadServiceConfig.initialize
 import net.gotev.uploadservice.data.UploadNotificationConfig
 import net.gotev.uploadservice.data.UploadNotificationStatusConfig
@@ -144,6 +145,11 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
       promise.reject(java.lang.IllegalArgumentException("notification must be a hash."))
       return
     }
+    if (options.hasKey("sessionTimeout") && options.getType("sessionTimeout") != ReadableType.Number) {
+      promise.reject(java.lang.IllegalArgumentException("session timeout must be number."))
+      return
+    }
+
     configureUploadServiceHTTPStack(options, promise)
     var requestType: String? = "raw"
     if (options.hasKey("type")) {
@@ -173,6 +179,9 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
 
     createNotificationChannel()
 
+    if (options.hasKey("sessionTimeout"))
+      idleTimeoutSeconds = options.getInt("sessionTimeout");
+    
     initialize(application, notificationChannelID, BuildConfig.DEBUG)
 
     if(!isGlobalRequestObserver) {
